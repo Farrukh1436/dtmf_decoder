@@ -1,178 +1,119 @@
-"""Visualization Functions for DTMF Analysis"""
-
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Optional
 
-def plot_full_waveform(audio_data: np.ndarray, sample_rate: int, title: str = "Audio Waveform"):
-    """
-    Plot the complete audio waveform.
-    
-    Args:
-        audio_data: Audio signal data
-        sample_rate: Audio sample rate
-        title: Plot title
-    """
-    plt.figure(figsize=(12, 4))
-    
-    # Create time axis
-    time_axis = np.arange(len(audio_data)) / sample_rate
-    
-    plt.plot(time_axis, audio_data, linewidth=0.8)
-    plt.title(title)
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("Amplitude")
-    plt.grid(True)
+
+def visualize_results(raw, filt, sr, raw_t, filt_t, raw_str, filt_str):
+    timeline = np.arange(len(raw)) / sr
+    digits_with_times = list(zip(filt_str, filt_t))
+    num_digits = len(digits_with_times)
+
+    print("\n" + "=" * 70)
+    print("DTMF DECODER RESULTS".center(70))
+    print("=" * 70)
+    print(f"Detected Sequence: {filt_str}")
+    print(f"Total Digits: {num_digits}")
+    print(f"Audio Duration: {timeline[-1]:.3f} seconds")
+    print("=" * 70 + "\n")
+
+    fig = plt.figure(figsize=(18, 6))
+
+    ax_full = plt.subplot2grid((3, num_digits), (0, 0), colspan=num_digits, rowspan=2)
+    ax_full.plot(timeline, filt, color="#2E86AB", alpha=0.8, linewidth=0.8)
+
+    colors = plt.cm.Set3(np.linspace(0, 1, num_digits))
+    for idx, (s, e) in enumerate(filt_t):
+        ax_full.axvspan(s, e, color=colors[idx], alpha=0.3)
+        mid_point = (s + e) / 2
+        ax_full.text(
+            mid_point,
+            ax_full.get_ylim()[1] * 0.85,
+            filt_str[idx],
+            ha="center",
+            fontsize=16,
+            fontweight="bold",
+            bbox=dict(
+                boxstyle="round,pad=0.5",
+                facecolor=colors[idx],
+                edgecolor="black",
+                linewidth=2,
+            ),
+        )
+
+    ax_full.set_ylabel("Amplitude", fontsize=11, fontweight="bold")
+    ax_full.set_xlabel("Time (seconds)", fontsize=11, fontweight="bold")
+    ax_full.set_title("DTMF Signal Timeline", fontsize=14, fontweight="bold", pad=15)
+    ax_full.grid(True, alpha=0.4, linestyle="--")
+    ax_full.spines["top"].set_visible(False)
+    ax_full.spines["right"].set_visible(False)
+
+    for idx, (digit, (start_t, end_t)) in enumerate(digits_with_times):
+        start_idx = int(start_t * sr)
+        end_idx = int(end_t * sr)
+        slice_data = filt[start_idx:end_idx]
+
+        n_samples = len(slice_data)
+        fft_vals = np.fft.rfft(slice_data * np.hamming(n_samples))
+        fft_freqs = np.fft.rfftfreq(n_samples, 1 / sr)
+        fft_mag = np.abs(fft_vals)
+
+        peak_indices = np.argsort(fft_mag)[-5:]
+        peak_freqs = fft_freqs[peak_indices]
+        peak_mags = fft_mag[peak_indices]
+        top_peaks = sorted(zip(peak_freqs, peak_mags), key=lambda x: x[1], reverse=True)[:2]
+
+        sorted_freqs = sorted([top_peaks[0][0], top_peaks[1][0]])
+        low_freq = sorted_freqs[0]
+        high_freq = sorted_freqs[1]
+
+        ax_fft = plt.subplot2grid((3, num_digits), (2, idx))
+        ax_fft.fill_between(fft_freqs, fft_mag, color=colors[idx], alpha=0.6)
+        ax_fft.plot(fft_freqs, fft_mag, color="#A23B72", linewidth=1.5)
+
+        ax_fft.set_xlim(600, 1600)
+        ax_fft.set_ylim(bottom=0)
+        ax_fft.set_xlabel("", fontsize=9)
+        ax_fft.set_ylabel("")
+        ax_fft.set_title(
+            f"'{digit}'",
+            fontsize=16,
+            fontweight="bold",
+            pad=8,
+            bbox=dict(
+                boxstyle="round,pad=0.5",
+                facecolor=colors[idx],
+                edgecolor="black",
+                linewidth=2,
+            ),
+        )
+        ax_fft.grid(True, alpha=0.3, linestyle=":")
+        ax_fft.tick_params(labelsize=7)
+        ax_fft.set_xticks([])
+        ax_fft.set_yticks([])
+
+        freq_text = f"Low: {low_freq:.0f} Hz\nHigh: {high_freq:.0f} Hz"
+        ax_fft.text(
+            0.5,
+            -0.25,
+            freq_text,
+            transform=ax_fft.transAxes,
+            ha="center",
+            va="top",
+            fontsize=9,
+            fontweight="bold",
+            bbox=dict(
+                boxstyle="round,pad=0.5",
+                facecolor="white",
+                edgecolor="gray",
+                linewidth=1,
+            ),
+        )
+
+        print(
+            f"Digit '{digit}': {start_t:.3f}s - {end_t:.3f}s | "
+            f"Low: {low_freq:.0f}Hz | High: {high_freq:.0f}Hz"
+        )
+
     plt.tight_layout()
+    plt.subplots_adjust(hspace=0.5, wspace=0.3, bottom=0.12)
     plt.show()
-
-def plot_audio_segment(segment: np.ndarray, segment_index: int, 
-                      start_sample: int, end_sample: int, sample_rate: int):
-    """
-    Plot an individual audio segment.
-    
-    Args:
-        segment: Audio segment data
-        segment_index: Index of the segment
-        start_sample: Start sample index in original audio
-        end_sample: End sample index in original audio
-        sample_rate: Audio sample rate
-    """
-    plt.figure(figsize=(10, 3))
-    
-    # Create time axis for the segment
-    time_axis = np.arange(len(segment)) / sample_rate
-    duration_ms = len(segment) / sample_rate * 1000
-    
-    plt.plot(time_axis, segment, linewidth=0.8)
-    plt.title(f"Segment {segment_index+1}: Samples {start_sample}-{end_sample} ({duration_ms:.1f}ms)")
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("Amplitude")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-def plot_fft_spectrum(freqs: np.ndarray, spectrum: np.ndarray, 
-                     decoded_char: Optional[str], segment_index: int,
-                     low_freq: Optional[float] = None, high_freq: Optional[float] = None):
-    """
-    Plot FFT magnitude spectrum with detected peaks highlighted.
-    
-    Args:
-        freqs: Frequency bins
-        spectrum: Magnitude spectrum
-        decoded_char: Decoded character (or None)
-        segment_index: Index of the segment
-        low_freq: Detected low frequency peak
-        high_freq: Detected high frequency peak
-    """
-    plt.figure(figsize=(12, 6))
-    
-    # Plot spectrum
-    plt.plot(freqs, spectrum, 'b-', linewidth=1)
-    
-    # Highlight detected peaks
-    if low_freq is not None:
-        plt.axvline(x=low_freq, color='red', linestyle='--', alpha=0.7, label=f'Low: {low_freq:.1f} Hz')
-    if high_freq is not None:
-        plt.axvline(x=high_freq, color='green', linestyle='--', alpha=0.7, label=f'High: {high_freq:.1f} Hz')
-    
-    plt.title(f"FFT Spectrum - Segment {segment_index+1} - Decoded: '{decoded_char}'")
-    plt.xlabel("Frequency (Hz)")
-    plt.ylabel("Magnitude")
-    plt.xlim(0, 2000)  # Focus on DTMF frequency range
-    plt.grid(True)
-    
-    if low_freq is not None or high_freq is not None:
-        plt.legend()
-    
-    plt.tight_layout()
-    plt.show()
-
-def plot_energy_analysis(energy: np.ndarray, threshold: float, sample_rate: int, 
-                        hop_length: int, segments: list):
-    """
-    Plot energy analysis showing detected segments.
-    
-    Args:
-        energy: Frame energy array
-        threshold: Energy threshold used for segmentation
-        sample_rate: Audio sample rate
-        hop_length: Hop length in samples
-        segments: List of detected segments
-    """
-    plt.figure(figsize=(12, 4))
-    
-    # Create time axis for energy frames
-    time_axis = np.arange(len(energy)) * hop_length / sample_rate
-    
-    # Plot energy
-    plt.plot(time_axis, energy, 'b-', linewidth=1, label='Energy')
-    plt.axhline(y=threshold, color='red', linestyle='--', alpha=0.7, label=f'Threshold: {threshold:.4f}')
-    
-    # Highlight detected segments
-    for i, (start, end) in enumerate(segments):
-        start_time = start / sample_rate
-        end_time = end / sample_rate
-        plt.axvspan(start_time, end_time, alpha=0.3, color='green', label='Active' if i == 0 else "")
-    
-    plt.title("Energy-based Segmentation")
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("RMS Energy")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-def plot_summary_results(decoded_sequence: str, processing_time: float = None):
-    """
-    Display final results in a formatted way.
-    
-    Args:
-        decoded_sequence: Final decoded phone number/sequence
-        processing_time: Optional processing time in seconds
-    """
-    print("\n" + "="*50)
-    print("           DTMF DECODING RESULTS")
-    print("="*50)
-    print(f"Decoded Sequence: {decoded_sequence}")
-    if processing_time is not None:
-        print(f"Processing Time: {processing_time:.2f} seconds")
-    print("="*50)
-    print()
-
-def create_dtmf_reference_plot():
-    """
-    Create a reference plot showing DTMF frequency layout.
-    """
-    from config import DTMFConfig
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    # Create grid showing frequency combinations
-    keypad = [
-        ['1', '2', '3', 'A'],
-        ['4', '5', '6', 'B'],
-        ['7', '8', '9', 'C'],
-        ['*', '0', '#', 'D']
-    ]
-    
-    # Plot frequency points
-    for i, low_freq in enumerate(DTMFConfig.LOW_FREQS):
-        for j, high_freq in enumerate(DTMFConfig.HIGH_FREQS):
-            ax.plot(high_freq, low_freq, 'ro', markersize=10)
-            ax.annotate(keypad[i][j], (high_freq, low_freq), 
-                       xytext=(5, 5), textcoords='offset points',
-                       fontsize=12, fontweight='bold')
-    
-    ax.set_xlabel('High Frequency (Hz)')
-    ax.set_ylabel('Low Frequency (Hz)')
-    ax.set_title('DTMF Frequency Map')
-    ax.grid(True, alpha=0.3)
-    
-    # Set axis limits with some padding
-    ax.set_xlim(1150, 1700)
-    ax.set_ylim(650, 1000)
-    
-    plt.tight_layout()
-    plt.show()
+    print("\n" + "=" * 70 + "\n")
