@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def visualize_results(raw, filt, sr, raw_t, filt_t, raw_str, filt_str, filt_freqs):
+def visualize_results(raw, filt, sr, raw_t, filt_t, raw_str, filt_str,sample_rate, filt_freqs):
     timeline = np.arange(len(raw)) / sr
     digits_with_times = list(zip(filt_str, filt_t, filt_freqs))
     num_digits = len(digits_with_times)
@@ -11,6 +11,8 @@ def visualize_results(raw, filt, sr, raw_t, filt_t, raw_str, filt_str, filt_freq
     print("DTMF DECODER RESULTS".center(70))
     print("=" * 70)
     print(f"Detected Sequence: {filt_str}")
+    print(f"Sample rate successfully read: {sample_rate} Hz.")
+
     print(f"Total Digits: {num_digits}")
     print(f"Audio Duration: {timeline[-1]:.3f} seconds")
     print("=" * 70 + "\n")

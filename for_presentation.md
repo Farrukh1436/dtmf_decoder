@@ -1,161 +1,173 @@
-# Team 4 – DTMF Decoder Project
-
-This file is a guide for preparing your slides and oral presentation. Maximum 10 minutes – keep it focused and visual.
-
----
-
-## 1. Mission Brief (1 slide)
-
-- **Title:** "Signal decoding via Fourier Transform – DTMF mission"
-- Very short story version of the assignment ("bad guy", bar, landline, microphone).
-- State the **goal** clearly: "Given a recorded DTMF signal, automatically recover the phone number using FFT–based analysis."  
-- Team name and members.
+# Team 4 – DTMF Decoder Presentation Guide
+## 6-7 Slide Structure for 10-Minute Presentation
 
 ---
 
-## 2. What is DTMF? (1–2 slides)
+## **SLIDE 1: Title Slide**
 
-Slide 1 – Concept:
-- Explain DTMF as **Dual Tone Multi-Frequency**: each key = low–frequency tone + high–frequency tone.
-- Show the standard **DTMF keypad table** with row/column frequencies (you can copy a clean table from Wikipedia into the slide).
-- Mention that actual measured peaks may be ±1–4 Hz because of noise / recording.
+### Visuals:
+- **Title:** "DTMF Signal Decoder via Fourier Transform"
+- **Subtitle:** "Team 4 - Mission: Decode the Bad Guy's Phone Call"
+- Team member names
+- Date: November 30, 2025
 
-Slide 2 – Example tone:
-- Show one digit signal example (e.g. from `Dtmf0.ogg`).
-- Time–domain plot: amplitude vs time for that digit.
-- Frequency–domain plot (FFT magnitude): two peaks corresponding to that digit’s row/column frequencies.
-
----
-
-## 3. Signal Processing Pipeline (2–3 slides)
-
-Goal: Walk through **each step of your software**, mapping directly to the modules you created.
-
-Slide 1 – High–level pipeline:
-- Draw a block diagram with arrows:
-  - `Input WAV` → `Band-pass filter` → `Windowing` → `Tone detection per window` → `Digit sequence post-processing` → `Decoded phone number`.
-- Mention that the system works for **any given DTMF signal file**, not just the provided one.
-
-Slide 2 – `signal_processing.py`:
-- Explain **band-pass filter**:
-  - 6th-order Butterworth band-pass from ~600 Hz to 1600 Hz.
-  - Removes low-frequency noise and high-frequency noise, leaving only DTMF band.
-- Explain **Goertzel / tone energy** computation (the `compute_tone_energy` method):
-  - You evaluate energy at specific target frequencies instead of doing a full FFT for every window.
-  - Mention the idea: multiply–accumulate recursion that focuses on one frequency bin.
-- Optional: Short formula / pseudocode for Goertzel (no need for heavy math).
-
-Slide 3 – `tone_analysis.py`:
-- Show how each window is analyzed:
-  - Apply Hamming window.
-  - Compute energy at all row frequencies (697, 770, 852, 941 Hz).
-  - Compute energy at all column frequencies (1209, 1336, 1477 Hz).
-- Explain decision logic:
-  - Choose the **maximum energy** in the low group and high group.
-  - Compare each max to the **average energy** in that group to ensure there is a clear dominant tone (`peak_ratio` threshold).
-  - Map the pair `(row_freq, col_freq)` to a digit via the tone matrix.
+### What to Say (15-20 seconds):
+"Good morning/afternoon. We're Team 4, and today we'll present our DTMF decoder that successfully recovered a phone number from a recorded telephone signal. Our mission was to decode what number a suspect dialed using only the recorded button tones."
 
 ---
 
-## 4. Windowing, Silence and Sequence Detection (2 slides)
+## **SLIDE 2: What is DTMF?**
 
-Slide 1 – `sequence_decoder.py`:
-- Explain the **sliding window** approach:
-  - Window length ~120 ms, hop ~50 ms (adjustable).
-  - For each window: normalize signal, then run `ToneAnalyzer`.
-- Explain how you **reject silence** and noise:
-  - Use **power threshold** (`pwr_thr`) to ignore very low-amplitude windows.
-  - Windows without a clear peak are treated as silence / non-DTMF.
+### Visuals:
+- **DTMF Keypad Table:**
+  ```
+       1209Hz  1336Hz  1477Hz
+  697Hz   1      2       3
+  770Hz   4      5       6
+  852Hz   7      8       9
+  941Hz          0
+  ```
+- Small waveform showing two sine waves combining
+- Formula: **Each button = Low Freq + High Freq**
 
-Slide 2 – Building the digit sequence:
-- Explain **minimum hits per digit**:
-  - Require a digit to be detected in at least `min_hits` consecutive windows before accepting it.
-- Explain **merging and de-duplicating**:
-  - Merge windows from the same digit if they are close in time.
-  - Remove immediate duplicates (pressing the same digit once should appear once in final sequence).
-- Show a small illustration of windows over time and how they become a clean sequence of digits.
-
----
-
-## 5. Fourier Transform and Frequency Axis (1–2 slides)
-
-Slide 1 – FFT basics:
-- Briefly state what you used FFT for in the project:
-  - Visualizing the spectrum of each digit.
-  - Verifying that each DTMF digit really has two strong peaks at the expected frequencies.
-- Show the equation of the discrete Fourier transform (optional, but recommended to satisfy the assignment):
-  - Mention how sampling frequency `fs` and window length `N` give frequency resolution:  
-    $$f_k = \frac{k \cdot f_s}{N}$$
-
-Slide 2 – X-axis interpretation:
-- Explain how you compute FFT frequency axis in code (e.g. `np.fft.rfftfreq(N, 1/fs)`).
-- Link this to reading the graphs correctly: peaks at \~697 Hz, \~1336 Hz etc.
+### What to Say (30-40 seconds):
+"DTMF stands for Dual-Tone Multi-Frequency. When you press a phone button, it generates two simultaneous tones - one from a low-frequency group and one from a high-frequency group. For example, pressing '5' generates 770Hz and 1336Hz together. Our challenge was to detect these frequency pairs from a noisy recording where peaks might shift ±1-4 Hz from the standard values."
 
 ---
 
-## 6. Visualization of Results (1–2 slides)
+## **SLIDE 3: Signal Processing Pipeline**
 
-Slide – `visualization.py`:
-- Show the main **timeline plot**:
-  - Filtered waveform vs time.
-  - Colored regions highlighting each detected digit interval.
-  - Digit labels over each highlighted region.
-- Show the **per-digit FFT panels**:
-  - For each detected digit: spectrum between 600–1600 Hz.
-  - Annotate or highlight the two main peaks with their approximate frequencies.
-- Explain how these visuals helped you debug and validate the algorithm.
+### Visuals:
+Flow diagram with arrows:
+```
+WAV Input → Bandpass Filter → Sliding Windows → Tone Detection → Sequence Decoder → Phone Number
+          (600-1600Hz)      (120ms windows)   (Goertzel)     (Silence+Merge)
+```
 
----
-
-## 7. Software Demo (1 slide + live demo)
-
-- Show how to run the decoder from the command line:
-  - `python dtmf_decoder.py samples/Project1_v4.wav`
-- Display the printed output:
-  - Sample rate.
-  - Decoded raw sequence.
-  - Decoded filtered sequence (final phone number).
-- If allowed, briefly run the program live and show the plots.
+### What to Say (40-50 seconds):
+"Our pipeline has five main stages. First, we apply a 6th-order Butterworth bandpass filter from 600-1600Hz to remove noise outside the DTMF frequency range. Then we use sliding windows of 120ms with 50ms hops to analyze the signal piece by piece. For each window, we use the Goertzel algorithm - a computationally efficient method that detects energy at specific target frequencies without computing a full FFT. Then we identify which digit was pressed, and finally we use silence detection to separate individual digits and build the complete phone number."
 
 ---
 
-## 8. Results and Discussion (1 slide)
+## **SLIDE 4: Tone Detection Algorithm**
 
-- Present the **final decoded phone number** for `Project1_v4.wav`.
-- Comment on:
-  - How stable the detection is with respect to noise.
-  - Whether raw vs filtered decoding differ.
-  - Any tricky parts (digits very close together, silence detection, threshold tuning).
+### Visuals:
+- **Left side - Flowchart:**
+  - Compute energy at 4 low frequencies (697, 770, 852, 941)
+  - Compute energy at 3 high frequencies (1209, 1336, 1477)
+  - Find max in each group
+  - Check thresholds: Power > 1e-5, Peak ratio > 2.5
+  - Map to digit
+- **Right side:** Example spectrum showing two clear peaks
 
----
-
-## 9. Limitations and Possible Improvements (1 slide)
-
-- Possible points:
-  - Sensitivity to parameter choices: window size, hop size, power/peak thresholds.
-  - Handling overlapping digits or very fast dialing.
-  - Real-time implementation vs offline processing.
-  - Extending to detect `*` and `#` or other signaling tones.
+### What to Say (40-50 seconds):
+"For each window, we compute the energy at all seven DTMF frequencies using the Goertzel algorithm. We then find the strongest frequency in the low group and the high group. To avoid false positives from noise, we apply three validation checks: First, the window must have sufficient power. Second, the detected peaks must be at least 2.5 times stronger than the average energy in their group. Third, the low and high frequency peaks must be balanced - preventing detection when only one tone is present. If all checks pass, we map the frequency pair to its corresponding digit."
 
 ---
 
-## 10. Individual Q&A Preparation
+## **SLIDE 5: Sequence Decoder & Silence Detection**
 
-Each team member should be ready to answer individually:
+### Visuals:
+- **Top:** Timeline showing waveform with colored regions marking detected digits
+- **Bottom - Diagram showing logic:**
+  - Silence (low power) → Reset
+  - 3+ consecutive detections → Accept digit
+  - Gap < 120ms → Same digit (merge)
+  - Gap > 120ms → New digit
 
-- **Theory:**
-  - What is DTMF? Why two frequencies per digit?
-  - What is the purpose of Fourier Transform / FFT here?
-  - How do you compute the frequency corresponding to FFT bin `k`?
+### What to Say (40-50 seconds):
+"The key challenge is separating individual button presses. DTMF signals are naturally separated by silence between digits. We exploit this by requiring a digit to appear in at least 3 consecutive windows before accepting it - this prevents noise spikes from being misread. When we encounter silence or low power, we reset. After detecting all windows, we merge detections that are within 120ms of each other into a single digit press. This consolidation step handles the fact that a single button press might span multiple analysis windows."
 
-- **Implementation:**
-  - What does `SignalProcessor` do (filter and Goertzel-style energy)?
-  - How does `ToneAnalyzer` decide which digit is present in a window?
-  - How does `SequenceDecoder` use silence and consecutive detections to form the final sequence?
-  - How is the final number printed and visualized?
+---
 
-- **Practical:**
-  - What parameters would you tune if the signal is very noisy?
-  - How would you adapt this system to decode a different sampling rate or another recording?
+## **SLIDE 6: Results & FFT Validation**
 
-Use this file as a checklist while building your slides.
+### Visuals:
+- **Top Left:** Decoded phone number displayed large: **"Result: [your decoded number]"**
+- **Top Right:** Full signal waveform with digit markers
+- **Bottom:** 3-4 example FFT spectrums for different digits, each showing two clear peaks with frequency labels
+
+### What to Say (40-50 seconds):
+"Our decoder successfully extracted the phone number: [state the number]. To validate our results, we used FFT analysis on each detected digit segment. These spectrum plots show clear dual peaks at the expected DTMF frequencies. For example, this digit shows peaks at 770Hz and 1336Hz, confirming it's a '5'. The frequency resolution of our FFT is calculated as fs divided by window length N, which gave us sufficient precision to identify each tone accurately despite minor frequency shifts from noise."
+
+---
+
+## **SLIDE 7: Key Equations & Conclusion**
+
+### Visuals:
+- **Top Section - Key Equations:**
+  ```
+  Goertzel Coefficient: 2·cos(2πk/N)
+  FFT Frequency Axis: f_k = k·fs/N
+  Bandpass Filter: 6th-order Butterworth [600, 1600] Hz
+  ```
+- **Bottom Section - Achievements:**
+  - ✓ Automatic decoding of any DTMF signal
+  - ✓ Noise-robust detection
+  - ✓ Handles variable silence gaps
+  - ✓ Visualizations for debugging
+
+### What to Say (30-40 seconds):
+"To summarize the key technical components: We used the Goertzel algorithm for efficient single-frequency energy computation, applied Butterworth filtering to isolate the DTMF band, and calculated FFT frequency bins using k times sampling rate divided by window length. Our final system can automatically decode any DTMF signal, handles realistic noise conditions, and provides comprehensive visualizations. The modular architecture in Python allows easy parameter tuning for different recording conditions. Thank you, we're ready for questions."
+
+---
+
+## **INDIVIDUAL Q&A PREPARATION**
+
+### Theory Questions:
+1. **"What is DTMF? Why two frequencies per digit?"**
+   - Answer: "DTMF uses two simultaneous tones to uniquely identify each key. This dual-tone approach reduces false detection from background noise or speech, since it's unlikely random noise will produce two exact frequencies simultaneously."
+
+2. **"What is the purpose of Fourier Transform / FFT here?"**
+   - Answer: "FFT converts our time-domain signal into frequency-domain, allowing us to see which frequencies are present and their magnitudes. This lets us identify the two specific DTMF tones for each digit."
+
+3. **"How do you compute the frequency corresponding to FFT bin k?"**
+   - Answer: "The frequency is f_k = k × fs / N, where fs is the sampling rate and N is the window length. This gives us the frequency resolution of our analysis."
+
+### Implementation Questions:
+1. **"What does SignalProcessor do?"**
+   - Answer: "It applies a 6th-order Butterworth bandpass filter to isolate DTMF frequencies, and implements the Goertzel algorithm to compute energy at specific target frequencies efficiently."
+
+2. **"How does ToneAnalyzer decide which digit is present?"**
+   - Answer: "It computes energy at all 7 DTMF frequencies, finds the strongest in low and high groups, validates using power and peak ratio thresholds, and maps the frequency pair to a digit using our tone matrix."
+
+3. **"How does SequenceDecoder use silence and consecutive detections?"**
+   - Answer: "It uses sliding windows, requires 3+ consecutive detections before accepting a digit, treats low-power windows as silence to separate digits, and merges nearby detections to prevent duplicates."
+
+4. **"How is the final number printed and visualized?"**
+   - Answer: "The sequence is printed as a string of digits. Visualization shows the waveform with color-coded regions for each digit, plus FFT spectrums showing the two peaks for each detected tone."
+
+### Practical Questions:
+1. **"What parameters would you tune if the signal is very noisy?"**
+   - Answer: "I would increase the power threshold and peak ratio to be more selective, possibly increase minimum consecutive hits, and adjust the bandpass filter bandwidth to be narrower if I know the exact frequency range."
+
+2. **"How would you adapt this for different sampling rates?"**
+   - Answer: "The system automatically adapts - our Goertzel and FFT computations use the sampling rate parameter. We might need to adjust window length in milliseconds to maintain the same time resolution."
+
+3. **"Why Goertzel instead of full FFT?"**
+   - Answer: "Goertzel is more efficient when you only need a few specific frequencies. We only care about 7 DTMF frequencies, not the entire spectrum, so Goertzel saves computation time."
+
+4. **"How do you handle repeated digits like '55'?"**
+   - Answer: "The silence gap between button presses resets our detector. When the user releases and presses again, the low-power silence windows clear the previous detection, allowing the same digit to be recognized again."
+
+---
+
+## **TIMING BREAKDOWN**
+- Slide 1: 20 seconds
+- Slide 2: 40 seconds
+- Slide 3: 50 seconds
+- Slide 4: 50 seconds
+- Slide 5: 50 seconds
+- Slide 6: 50 seconds
+- Slide 7: 40 seconds
+- **Total: ~5 minutes** (leaves 5 minutes for demo + Q&A)
+
+---
+
+## **PRESENTATION TIPS**
+- Speak clearly and maintain eye contact
+- Point to specific parts of diagrams while explaining
+- Practice transitions between slides
+- Have the code ready to run for live demo
+- Each team member should understand all slides for Q&A
+- Be confident - your implementation is solid!
