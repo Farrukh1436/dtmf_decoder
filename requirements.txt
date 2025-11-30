@@ -1,0 +1,10 @@
+# DTMF Decoder Requirements
+# Core scientific computing and signal processing
+numpy>=1.21.0
+scipy>=1.7.0
+
+# Data visualization and plotting
+matplotlib>=3.3.0
+
+# Optional: typing extensions for better type hints (if using older Python)
+typing_extensions>=3.10.0; python_version<"3.8"
