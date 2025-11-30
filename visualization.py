@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def visualize_results(raw, filt, sr, raw_t, filt_t, raw_str, filt_str):
+def visualize_results(raw, filt, sr, raw_t, filt_t, raw_str, filt_str, filt_freqs):
     timeline = np.arange(len(raw)) / sr
-    digits_with_times = list(zip(filt_str, filt_t))
+    digits_with_times = list(zip(filt_str, filt_t, filt_freqs))
     num_digits = len(digits_with_times)
 
     print("\n" + "=" * 70)
@@ -46,7 +46,7 @@ def visualize_results(raw, filt, sr, raw_t, filt_t, raw_str, filt_str):
     ax_full.spines["top"].set_visible(False)
     ax_full.spines["right"].set_visible(False)
 
-    for idx, (digit, (start_t, end_t)) in enumerate(digits_with_times):
+    for idx, (digit, (start_t, end_t), (low_freq, high_freq)) in enumerate(digits_with_times):
         start_idx = int(start_t * sr)
         end_idx = int(end_t * sr)
         slice_data = filt[start_idx:end_idx]
@@ -55,15 +55,6 @@ def visualize_results(raw, filt, sr, raw_t, filt_t, raw_str, filt_str):
         fft_vals = np.fft.rfft(slice_data * np.hamming(n_samples))
         fft_freqs = np.fft.rfftfreq(n_samples, 1 / sr)
         fft_mag = np.abs(fft_vals)
-
-        peak_indices = np.argsort(fft_mag)[-5:]
-        peak_freqs = fft_freqs[peak_indices]
-        peak_mags = fft_mag[peak_indices]
-        top_peaks = sorted(zip(peak_freqs, peak_mags), key=lambda x: x[1], reverse=True)[:2]
-
-        sorted_freqs = sorted([top_peaks[0][0], top_peaks[1][0]])
-        low_freq = sorted_freqs[0]
-        high_freq = sorted_freqs[1]
 
         ax_fft = plt.subplot2grid((3, num_digits), (2, idx))
         ax_fft.fill_between(fft_freqs, fft_mag, color=colors[idx], alpha=0.6)
